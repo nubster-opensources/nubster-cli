@@ -1,0 +1,20 @@
+[package]
+name = "nub"
+version = "0.1.0"
+edition = "2021"
+description = "Unified command-line client for the Nubster platform, starting with sovereign source control."
+license = "MIT"
+repository = "https://github.com/nubster-opensources/nubster-cli"
+readme = "README.md"
+publish = false
+
+[[bin]]
+name = "nub"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
