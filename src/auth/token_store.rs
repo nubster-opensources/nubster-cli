@@ -1,8 +1,4 @@
-//! Per-host token storage.
-//!
-//! Wired into commands starting with issue #5; until then the API is plumbing,
-//! hence the module-wide `dead_code` allowance.
-#![allow(dead_code)]
+//! Per-host token storage backed by the OS keychain, with a file fallback.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

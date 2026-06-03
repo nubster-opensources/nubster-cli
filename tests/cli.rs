@@ -33,7 +33,7 @@ fn repo_help_lists_all_subcommands() {
 #[test]
 fn unimplemented_leaf_exits_with_not_implemented_code() {
     let output = nub()
-        .args(["auth", "status"])
+        .args(["auth", "setup-git"])
         .output()
         .expect("failed to run nub");
     assert_eq!(output.status.code(), Some(3));
