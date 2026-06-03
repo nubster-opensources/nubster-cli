@@ -96,7 +96,7 @@ impl Config {
 }
 
 /// Resolves the configuration directory (env override first, then OS default).
-fn config_dir() -> Result<PathBuf, CliError> {
+pub(crate) fn config_dir() -> Result<PathBuf, CliError> {
     if let Some(dir) = std::env::var_os(CONFIG_DIR_ENV) {
         return Ok(PathBuf::from(dir));
     }
