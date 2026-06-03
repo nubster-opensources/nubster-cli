@@ -54,7 +54,6 @@ impl Config {
     ///
     /// # Errors
     /// Returns [`CliError`] if the file cannot be serialized or written.
-    #[allow(dead_code)] // Exercised by tests; first runtime caller lands with `auth login`.
     pub fn save(&self) -> Result<(), CliError> {
         self.save_to(&Self::path()?)
     }

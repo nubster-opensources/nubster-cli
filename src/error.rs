@@ -6,9 +6,6 @@ pub enum CliError {
     /// The requested command exists but is not implemented yet.
     NotImplemented(&'static str),
     /// No valid credentials are available for the target host.
-    ///
-    /// Part of the exit-code contract; constructed once authentication commands land.
-    #[allow(dead_code)]
     NotAuthenticated,
     /// A generic, message-carrying failure.
     Generic(String),
