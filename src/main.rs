@@ -3,8 +3,9 @@
 use clap::Parser;
 
 mod cli;
+mod commands;
+mod error;
 
 fn main() -> std::process::ExitCode {
-    let args = cli::Cli::parse();
-    cli::run(&args)
+    cli::run(cli::Cli::parse())
 }
