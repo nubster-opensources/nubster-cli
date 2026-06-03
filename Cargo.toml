@@ -23,9 +23,15 @@ keyring = { version = "3", features = [
     "sync-secret-service",
     "crypto-rust",
 ] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+tokio = { version = "1", features = ["rt", "macros", "time"] }
 
 [dev-dependencies]
 tempfile = "3"
+wiremock = "0.6"
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }
