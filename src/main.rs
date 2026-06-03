@@ -4,6 +4,7 @@ use clap::Parser;
 
 mod cli;
 mod commands;
+mod config;
 mod error;
 
 fn main() -> std::process::ExitCode {

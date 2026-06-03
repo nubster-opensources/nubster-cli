@@ -24,6 +24,8 @@ pub enum Command {
     Auth(commands::auth::AuthArgs),
     /// Repository operations.
     Repo(commands::scm::repo::RepoArgs),
+    /// Inspect the CLI configuration.
+    Config(commands::config::ConfigArgs),
 }
 
 /// Root command for `nub`.
@@ -48,6 +50,7 @@ pub fn run(cli: Cli) -> ExitCode {
     let result = match &command {
         Command::Auth(args) => commands::auth::run(args, &global),
         Command::Repo(args) => commands::scm::repo::run(args, &global),
+        Command::Config(args) => commands::config::run(args, &global),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

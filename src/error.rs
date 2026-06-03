@@ -11,9 +11,6 @@ pub enum CliError {
     #[allow(dead_code)]
     NotAuthenticated,
     /// A generic, message-carrying failure.
-    ///
-    /// Constructed once commands with fallible runtime paths land.
-    #[allow(dead_code)]
     Generic(String),
 }
 
