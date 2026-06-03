@@ -2,6 +2,7 @@
 
 use clap::Parser;
 
+mod api;
 mod auth;
 mod cli;
 mod commands;
