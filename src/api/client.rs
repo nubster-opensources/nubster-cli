@@ -1,7 +1,5 @@
 //! HTTP client targeting the Nubster control-plane API.
 
-#![allow(dead_code)] // Surface wired into commands by #8-#9; drop this allow there.
-
 use std::time::Duration;
 
 use reqwest::{Response, StatusCode, Url};
@@ -80,7 +78,8 @@ impl Client {
         Self::new(&base_url, &token)
     }
 
-    /// Replaces the retry policy, chiefly for tests.
+    /// Replaces the retry policy, for use in tests.
+    #[cfg(test)]
     #[must_use]
     pub fn with_retry(self, retry: RetryPolicy) -> Self {
         Self { retry, ..self }
