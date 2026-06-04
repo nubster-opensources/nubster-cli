@@ -75,7 +75,7 @@ async fn repo_create_posts_and_prints_full_name() {
     Mock::given(method("POST"))
         .and(path("/scm/repos"))
         .and(header("authorization", "Bearer test-pat"))
-        .respond_with(ResponseTemplate::new(201).set_body_json(&fake_repo("test-repo")))
+        .respond_with(ResponseTemplate::new(201).set_body_json(fake_repo("test-repo")))
         .expect(1)
         .mount(&server)
         .await;
@@ -121,7 +121,7 @@ async fn repo_view_prints_detail() {
     Mock::given(method("GET"))
         .and(path("/scm/repos/test-repo"))
         .and(header("authorization", "Bearer test-pat"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&fake_repo("test-repo")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fake_repo("test-repo")))
         .expect(1)
         .mount(&server)
         .await;
