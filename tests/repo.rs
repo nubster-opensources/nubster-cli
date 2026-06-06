@@ -334,6 +334,39 @@ async fn repo_clone_fails_with_git_exit_code() {
 }
 
 #[tokio::test]
+async fn repo_clone_treats_flag_like_url_as_positional() {
+    let server = MockServer::start().await;
+    let (dir, envs) = clone_fixture(
+        &server,
+        "--upload-pack=do-evil",
+        "ssh://unused.invalid/x.git",
+    )
+    .await;
+
+    let output = run_nub(&["repo", "clone", "test-repo"], &envs, &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(7),
+        "a flag-like URL must reach git after `--` and fail as a repository"
+    );
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_refuses_command_executing_transport() {
+    let server = MockServer::start().await;
+    let (dir, envs) = clone_fixture(&server, "ext::echo pwned", "ssh://unused.invalid/x.git").await;
+
+    let output = run_nub(&["repo", "clone", "test-repo"], &envs, &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(7),
+        "the ext transport must be refused by the protocol allow-list"
+    );
+    drop(dir);
+}
+
+#[tokio::test]
 async fn repo_clone_exits_not_authenticated_when_no_token() {
     let (dir, envs) = stub_env("https://api.example.com");
     let output = run_nub(&["repo", "clone", "foo"], &envs, &[]);
