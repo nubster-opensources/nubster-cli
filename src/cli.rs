@@ -50,7 +50,7 @@ pub fn run(cli: Cli) -> ExitCode {
     let Cli { global, command } = cli;
     let printer = Printer::new(&global);
     let result = match &command {
-        Command::Auth(args) => commands::auth::run(args, &global),
+        Command::Auth(args) => commands::auth::run(args, &global, &printer),
         Command::Repo(args) => commands::scm::repo::run(args, &global, &printer),
         Command::Config(args) => commands::config::run(args, &global),
     };
