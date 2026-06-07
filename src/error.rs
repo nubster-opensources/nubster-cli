@@ -3,8 +3,6 @@ use std::fmt;
 /// Errors surfaced by the CLI, each mapped to a process exit code.
 #[derive(Debug)]
 pub enum CliError {
-    /// The requested command exists but is not implemented yet.
-    NotImplemented(&'static str),
     /// No valid credentials are available for the target host.
     NotAuthenticated,
     /// A transport-level failure reaching the platform (connection, timeout).
@@ -16,6 +14,13 @@ pub enum CliError {
         /// Message extracted from the response body.
         message: String,
     },
+    /// A git subprocess invocation failed.
+    GitCommand {
+        /// Exit code reported by git, when available.
+        code: Option<i32>,
+        /// Description of the attempted git operation.
+        context: String,
+    },
     /// A generic, message-carrying failure.
     Generic(String),
 }
@@ -26,10 +31,10 @@ impl CliError {
     pub fn exit_code(&self) -> u8 {
         match self {
             Self::Generic(_) => 1,
-            Self::NotImplemented(_) => 3,
             Self::NotAuthenticated => 4,
             Self::Network(_) => 5,
             Self::Api { .. } => 6,
+            Self::GitCommand { .. } => 7,
         }
     }
 }
@@ -37,10 +42,13 @@ impl CliError {
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotImplemented(what) => write!(f, "`{what}` is not implemented yet"),
             Self::NotAuthenticated => write!(f, "not authenticated; run `nub auth login`"),
             Self::Network(msg) => write!(f, "network error: {msg}"),
             Self::Api { status, message } => write!(f, "API error ({status}): {message}"),
+            Self::GitCommand { code, context } => match code {
+                Some(code) => write!(f, "git {context} failed with exit code {code}"),
+                None => write!(f, "git {context} was terminated by a signal"),
+            },
             Self::Generic(msg) => write!(f, "{msg}"),
         }
     }
@@ -55,7 +63,6 @@ mod tests {
     #[test]
     fn error_exit_codes_are_stable() {
         assert_eq!(CliError::Generic(String::new()).exit_code(), 1);
-        assert_eq!(CliError::NotImplemented("x").exit_code(), 3);
         assert_eq!(CliError::NotAuthenticated.exit_code(), 4);
         assert_eq!(CliError::Network(String::new()).exit_code(), 5);
         assert_eq!(
@@ -65,6 +72,14 @@ mod tests {
             }
             .exit_code(),
             6
+        );
+        assert_eq!(
+            CliError::GitCommand {
+                code: Some(128),
+                context: String::new()
+            }
+            .exit_code(),
+            7
         );
     }
 }

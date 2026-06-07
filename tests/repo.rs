@@ -57,15 +57,56 @@ struct RepoBody<'a> {
 }
 
 fn fake_repo(name: &str) -> RepoBody<'_> {
+    fake_repo_with_urls(
+        name,
+        "https://git.nubster.com/ns/test-repo.git",
+        "ssh://git@git.nubster.com/ns/test-repo.git",
+    )
+}
+
+fn fake_repo_with_urls<'a>(name: &'a str, clone_url: &'a str, ssh_url: &'a str) -> RepoBody<'a> {
     RepoBody {
         id: "abc123",
         name,
         full_name: "ns/test-repo",
         description: None,
         visibility: "private",
-        clone_url: "https://git.nubster.com/ns/test-repo.git",
-        ssh_url: "ssh://git@git.nubster.com/ns/test-repo.git",
+        clone_url,
+        ssh_url,
         created_at: "2026-06-04T00:00:00Z",
+    }
+}
+
+/// Environment that points git at a throwaway global config so tests never
+/// read or pollute the developer's `~/.gitconfig`.
+fn git_isolation_env(dir: &std::path::Path) -> Vec<(&'static str, String)> {
+    vec![
+        (
+            "GIT_CONFIG_GLOBAL",
+            dir.join("gitconfig").to_string_lossy().into_owned(),
+        ),
+        ("GIT_CONFIG_NOSYSTEM", "1".to_owned()),
+    ]
+}
+
+/// Creates a bare repository under `path` and returns its `file://` URL,
+/// letting tests exercise a real `git clone` without network or credentials.
+fn init_bare_repo(path: &std::path::Path) -> String {
+    let status = Command::new("git")
+        .args(["init", "--bare", "--quiet"])
+        .arg(path)
+        .status()
+        .expect("run git init");
+    assert!(status.success(), "git init --bare failed");
+    file_url(path)
+}
+
+fn file_url(path: &std::path::Path) -> String {
+    let p = path.to_string_lossy().replace('\\', "/");
+    if p.starts_with('/') {
+        format!("file://{p}")
+    } else {
+        format!("file:///{p}")
     }
 }
 
@@ -144,6 +185,191 @@ async fn repo_view_prints_detail() {
 async fn repo_create_exits_not_authenticated_when_no_token() {
     let (dir, envs) = stub_env("https://api.example.com");
     let output = run_nub(&["repo", "create", "--name", "foo"], &envs, &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(4),
+        "expected NotAuthenticated (4)"
+    );
+    drop(dir);
+}
+
+/// Mounts a `view` mock answering with the given clone and ssh URLs, and
+/// returns a logged-in environment with git isolation applied.
+async fn clone_fixture(
+    server: &MockServer,
+    clone_url: &str,
+    ssh_url: &str,
+) -> (tempfile::TempDir, Vec<(&'static str, String)>) {
+    Mock::given(method("GET"))
+        .and(path("/scm/repos/test-repo"))
+        .and(header("authorization", "Bearer test-pat"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(fake_repo_with_urls(
+                "test-repo",
+                clone_url,
+                ssh_url,
+            )),
+        )
+        .expect(1)
+        .mount(server)
+        .await;
+
+    let (dir, mut envs) = stub_env(&server.uri());
+    envs.extend(git_isolation_env(dir.path()));
+    let login = run_nub(&["auth", "login", "--with-token"], &envs, b"test-pat");
+    assert!(login.status.success(), "login failed");
+    (dir, envs)
+}
+
+#[tokio::test]
+async fn repo_clone_clones_into_positional_dest() {
+    let server = MockServer::start().await;
+    let work = tempfile::TempDir::new().expect("temp dir");
+    let clone_url = init_bare_repo(&work.path().join("origin.git"));
+    let (dir, envs) = clone_fixture(&server, &clone_url, "ssh://unused.invalid/x.git").await;
+
+    let dest = work.path().join("checkout");
+    let dest_arg = dest.to_string_lossy().into_owned();
+    let output = run_nub(&["repo", "clone", "test-repo", &dest_arg], &envs, &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(dest.join(".git").is_dir(), "clone destination missing .git");
+    let stdout = String::from_utf8(output.stdout).expect("non-utf8 stdout");
+    assert!(stdout.contains("Cloned ns/test-repo"), "stdout: {stdout}");
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_accepts_dest_flag() {
+    let server = MockServer::start().await;
+    let work = tempfile::TempDir::new().expect("temp dir");
+    let clone_url = init_bare_repo(&work.path().join("origin.git"));
+    let (dir, envs) = clone_fixture(&server, &clone_url, "ssh://unused.invalid/x.git").await;
+
+    let dest = work.path().join("checkout-flag");
+    let dest_arg = dest.to_string_lossy().into_owned();
+    let output = run_nub(
+        &["repo", "clone", "test-repo", "--dest", &dest_arg],
+        &envs,
+        &[],
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(dest.join(".git").is_dir(), "clone destination missing .git");
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_uses_ssh_url_with_ssh_flag() {
+    let server = MockServer::start().await;
+    let work = tempfile::TempDir::new().expect("temp dir");
+    let ssh_url = init_bare_repo(&work.path().join("origin.git"));
+    let (dir, envs) = clone_fixture(
+        &server,
+        "https://git.nubster.com/ns/test-repo.git",
+        &ssh_url,
+    )
+    .await;
+
+    let dest = work.path().join("checkout-ssh");
+    let dest_arg = dest.to_string_lossy().into_owned();
+    let output = run_nub(
+        &["repo", "clone", "test-repo", "--ssh", &dest_arg],
+        &envs,
+        &[],
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(dest.join(".git").is_dir(), "clone destination missing .git");
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_guides_when_helper_missing() {
+    let server = MockServer::start().await;
+    let (dir, envs) = clone_fixture(
+        &server,
+        "https://git.nubster.com/ns/test-repo.git",
+        "ssh://git@git.nubster.com/ns/test-repo.git",
+    )
+    .await;
+
+    let output = run_nub(&["repo", "clone", "test-repo"], &envs, &[]);
+    assert_eq!(output.status.code(), Some(1), "expected guided error (1)");
+    let stderr = String::from_utf8(output.stderr).expect("non-utf8 stderr");
+    assert!(
+        stderr.contains("nub auth setup-git"),
+        "stderr should guide towards setup-git: {stderr}"
+    );
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_fails_with_git_exit_code() {
+    let server = MockServer::start().await;
+    let work = tempfile::TempDir::new().expect("temp dir");
+    let missing = file_url(&work.path().join("missing.git"));
+    let (dir, envs) = clone_fixture(&server, &missing, "ssh://unused.invalid/x.git").await;
+
+    let dest_arg = work
+        .path()
+        .join("never-created")
+        .to_string_lossy()
+        .into_owned();
+    let output = run_nub(&["repo", "clone", "test-repo", &dest_arg], &envs, &[]);
+    assert_eq!(output.status.code(), Some(7), "expected GitCommand (7)");
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_treats_flag_like_url_as_positional() {
+    let server = MockServer::start().await;
+    let (dir, envs) = clone_fixture(
+        &server,
+        "--upload-pack=do-evil",
+        "ssh://unused.invalid/x.git",
+    )
+    .await;
+
+    let output = run_nub(&["repo", "clone", "test-repo"], &envs, &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(7),
+        "a flag-like URL must reach git after `--` and fail as a repository"
+    );
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_refuses_command_executing_transport() {
+    let server = MockServer::start().await;
+    let (dir, envs) = clone_fixture(&server, "ext::echo pwned", "ssh://unused.invalid/x.git").await;
+
+    let output = run_nub(&["repo", "clone", "test-repo"], &envs, &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(7),
+        "the ext transport must be refused by the protocol allow-list"
+    );
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_exits_not_authenticated_when_no_token() {
+    let (dir, envs) = stub_env("https://api.example.com");
+    let output = run_nub(&["repo", "clone", "foo"], &envs, &[]);
     assert_eq!(
         output.status.code(),
         Some(4),

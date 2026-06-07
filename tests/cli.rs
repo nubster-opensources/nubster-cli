@@ -31,21 +31,30 @@ fn repo_help_lists_all_subcommands() {
 }
 
 #[test]
-fn unimplemented_leaf_exits_with_not_implemented_code() {
+fn global_flags_are_accepted_at_leaf_level() {
+    // Global flags must parse at any depth of the command tree; a parse
+    // failure would exit with clap's usage code 2 before printing help.
+    let output = nub()
+        .args(["repo", "clone", "--json", "--no-color", "--help"])
+        .output()
+        .expect("failed to run nub");
+    assert!(output.status.success(), "global flags rejected at leaf");
+}
+
+#[test]
+fn clone_requires_a_repository_name() {
     let output = nub()
         .args(["repo", "clone"])
         .output()
         .expect("failed to run nub");
-    assert_eq!(output.status.code(), Some(3));
+    assert_eq!(output.status.code(), Some(2), "expected clap usage error");
 }
 
 #[test]
-fn global_flags_are_accepted_at_leaf_level() {
-    // The leaf is not implemented yet, but the global flags must still parse
-    // (a parse failure would exit with clap's usage code 2, not 3).
+fn clone_rejects_both_dest_forms() {
     let output = nub()
-        .args(["repo", "clone", "--json", "--no-color"])
+        .args(["repo", "clone", "ns/repo", "dir-a", "--dest", "dir-b"])
         .output()
         .expect("failed to run nub");
-    assert_eq!(output.status.code(), Some(3));
+    assert_eq!(output.status.code(), Some(2), "expected clap usage error");
 }
