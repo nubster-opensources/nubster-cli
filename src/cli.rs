@@ -2,6 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use std::process::ExitCode;
 
 use crate::commands;
+use crate::output::Printer;
 
 /// Options accepted at any level of the command tree.
 #[derive(Args, Debug)]
@@ -47,9 +48,10 @@ pub struct Cli {
 #[must_use]
 pub fn run(cli: Cli) -> ExitCode {
     let Cli { global, command } = cli;
+    let printer = Printer::new(&global);
     let result = match &command {
         Command::Auth(args) => commands::auth::run(args, &global),
-        Command::Repo(args) => commands::scm::repo::run(args, &global),
+        Command::Repo(args) => commands::scm::repo::run(args, &global, &printer),
         Command::Config(args) => commands::config::run(args, &global),
     };
     match result {

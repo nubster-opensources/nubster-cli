@@ -9,6 +9,7 @@ mod commands;
 mod config;
 mod error;
 mod git;
+mod output;
 
 fn main() -> std::process::ExitCode {
     cli::run(cli::Cli::parse())
