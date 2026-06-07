@@ -377,3 +377,151 @@ async fn repo_clone_exits_not_authenticated_when_no_token() {
     );
     drop(dir);
 }
+
+#[tokio::test]
+async fn repo_list_json_emits_repository_array() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/scm/repos"))
+        .and(header("authorization", "Bearer test-pat"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(&[fake_repo("alpha"), fake_repo("beta")]),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let (dir, envs) = stub_env(&server.uri());
+    let login = run_nub(&["auth", "login", "--with-token"], &envs, b"test-pat");
+    assert!(login.status.success(), "login failed");
+
+    let output = run_nub(&["repo", "list", "--json"], &envs, &[]);
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).expect("non-utf8 stdout");
+    assert!(!stdout.contains('\u{1b}'), "json output must not be styled");
+    let repos: serde_json::Value = serde_json::from_str(&stdout).expect("valid json");
+    let repos = repos.as_array().expect("a json array");
+    assert_eq!(repos.len(), 2);
+    assert_eq!(repos[0]["full_name"], "ns/test-repo");
+    assert_eq!(repos[0]["visibility"], "private");
+    assert_eq!(
+        repos[0]["clone_url"],
+        "https://git.nubster.com/ns/test-repo.git"
+    );
+    assert!(
+        repos[0].get("id").is_none(),
+        "fields outside the CLI contract must not leak"
+    );
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_view_json_emits_repository_object() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/scm/repos/test-repo"))
+        .and(header("authorization", "Bearer test-pat"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fake_repo("test-repo")))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let (dir, envs) = stub_env(&server.uri());
+    let login = run_nub(&["auth", "login", "--with-token"], &envs, b"test-pat");
+    assert!(login.status.success(), "login failed");
+
+    let output = run_nub(&["repo", "view", "test-repo", "--json"], &envs, &[]);
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).expect("non-utf8 stdout");
+    let repo: serde_json::Value = serde_json::from_str(&stdout).expect("valid json");
+    assert_eq!(repo["full_name"], "ns/test-repo");
+    assert_eq!(
+        repo["ssh_url"],
+        "ssh://git@git.nubster.com/ns/test-repo.git"
+    );
+    assert_eq!(repo["created_at"], "2026-06-04T00:00:00Z");
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_create_json_emits_created_repository() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/scm/repos"))
+        .and(header("authorization", "Bearer test-pat"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(fake_repo("test-repo")))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let (dir, envs) = stub_env(&server.uri());
+    let login = run_nub(&["auth", "login", "--with-token"], &envs, b"test-pat");
+    assert!(login.status.success(), "login failed");
+
+    let output = run_nub(
+        &["repo", "create", "--name", "test-repo", "--json"],
+        &envs,
+        &[],
+    );
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).expect("non-utf8 stdout");
+    let repo: serde_json::Value = serde_json::from_str(&stdout).expect("valid json");
+    assert_eq!(repo["full_name"], "ns/test-repo");
+    assert_eq!(repo["visibility"], "private");
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_clone_json_reports_destination_path() {
+    let server = MockServer::start().await;
+    let work = tempfile::TempDir::new().expect("temp dir");
+    let clone_url = init_bare_repo(&work.path().join("origin.git"));
+    let (dir, envs) = clone_fixture(&server, &clone_url, "ssh://unused.invalid/x.git").await;
+
+    let dest = work.path().join("checkout-json");
+    let dest_arg = dest.to_string_lossy().into_owned();
+    let output = run_nub(
+        &["repo", "clone", "test-repo", &dest_arg, "--json"],
+        &envs,
+        &[],
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("non-utf8 stdout");
+    let outcome: serde_json::Value = serde_json::from_str(&stdout).expect("valid json");
+    assert_eq!(outcome["full_name"], "ns/test-repo");
+    let path = outcome["path"].as_str().expect("a path string");
+    assert_eq!(std::path::Path::new(path), dest.as_path());
+    drop(dir);
+}
+
+#[tokio::test]
+async fn repo_list_human_prints_header_without_ansi_when_piped() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/scm/repos"))
+        .and(header("authorization", "Bearer test-pat"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&[fake_repo("alpha")]))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let (dir, envs) = stub_env(&server.uri());
+    let login = run_nub(&["auth", "login", "--with-token"], &envs, b"test-pat");
+    assert!(login.status.success(), "login failed");
+
+    let output = run_nub(&["repo", "list"], &envs, &[]);
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).expect("non-utf8 stdout");
+    assert!(stdout.contains("NAME"), "stdout: {stdout}");
+    assert!(stdout.contains("VISIBILITY"), "stdout: {stdout}");
+    assert!(
+        !stdout.contains('\u{1b}'),
+        "piped output must have ANSI stripped: {stdout:?}"
+    );
+    drop(dir);
+}

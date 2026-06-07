@@ -85,3 +85,71 @@ fn login_with_empty_stdin_is_rejected() {
     );
     assert_eq!(output.status.code(), Some(1));
 }
+
+#[test]
+fn auth_status_json_reports_host_and_login_state() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let login = run_nub(
+        &["auth", "login", "--with-token", "--host", "cli.example"],
+        dir.path(),
+        Some("nub_pat_secret\n"),
+    );
+    assert!(login.status.success());
+
+    let status = run_nub(
+        &["auth", "status", "--host", "cli.example", "--json"],
+        dir.path(),
+        None,
+    );
+    assert!(status.status.success());
+    let stdout = String::from_utf8(status.stdout).expect("non-utf8 stdout");
+    assert!(!stdout.contains('\u{1b}'), "json output must not be styled");
+    let value: serde_json::Value = serde_json::from_str(&stdout).expect("valid json");
+    assert_eq!(value["host"], "cli.example");
+    assert_eq!(value["logged_in"], true);
+}
+
+#[test]
+fn auth_login_and_logout_json_report_host() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let login = run_nub(
+        &[
+            "auth",
+            "login",
+            "--with-token",
+            "--host",
+            "cli.example",
+            "--json",
+        ],
+        dir.path(),
+        Some("nub_pat_secret\n"),
+    );
+    assert!(login.status.success());
+    let value: serde_json::Value =
+        serde_json::from_str(&String::from_utf8(login.stdout).expect("non-utf8 stdout"))
+            .expect("valid json");
+    assert_eq!(value["host"], "cli.example");
+
+    let logout = run_nub(
+        &["auth", "logout", "--host", "cli.example", "--json"],
+        dir.path(),
+        None,
+    );
+    assert!(logout.status.success());
+    let value: serde_json::Value =
+        serde_json::from_str(&String::from_utf8(logout.stdout).expect("non-utf8 stdout"))
+            .expect("valid json");
+    assert_eq!(value["host"], "cli.example");
+}
+
+#[test]
+fn auth_status_json_stays_silent_when_not_authenticated() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let status = run_nub(
+        &["auth", "status", "--host", "cli.example", "--json"],
+        dir.path(),
+        None,
+    );
+    assert_eq!(status.status.code(), Some(4));
+    assert!(status.stdout.is_empty(), "stdout must stay empty");
+}

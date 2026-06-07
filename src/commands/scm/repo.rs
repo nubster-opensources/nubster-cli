@@ -1,6 +1,8 @@
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use clap::{Args, Subcommand};
+use serde::Serialize;
 
 use crate::api::client::Client;
 use crate::api::repo::{CreateRepoRequest, RepoService, Repository, Visibility};
@@ -9,6 +11,7 @@ use crate::cli::GlobalArgs;
 use crate::config::Config;
 use crate::error::CliError;
 use crate::git;
+use crate::output::{self, HumanRender, Printer};
 
 /// Repository commands.
 #[derive(Args, Debug)]
@@ -58,21 +61,27 @@ pub enum RepoCommand {
 ///
 /// # Errors
 /// Returns a [`CliError`] on failure.
-pub fn run(args: &RepoArgs, global: &GlobalArgs) -> Result<(), CliError> {
+pub fn run(args: &RepoArgs, global: &GlobalArgs, printer: &Printer) -> Result<(), CliError> {
     match &args.command {
         RepoCommand::Create {
             name,
             description,
             public,
-        } => run_create(name, description.as_deref(), *public, global),
+        } => run_create(name, description.as_deref(), *public, global, printer),
         RepoCommand::Clone {
             name,
             dest,
             dest_flag,
             ssh,
-        } => run_clone(name, dest.as_deref().or(dest_flag.as_deref()), *ssh, global),
-        RepoCommand::List => run_list(global),
-        RepoCommand::View { name } => run_view(name, global),
+        } => run_clone(
+            name,
+            dest.as_deref().or(dest_flag.as_deref()),
+            *ssh,
+            global,
+            printer,
+        ),
+        RepoCommand::List => run_list(global, printer),
+        RepoCommand::View { name } => run_view(name, global, printer),
     }
 }
 
@@ -81,6 +90,7 @@ fn run_create(
     description: Option<&str>,
     public: bool,
     global: &GlobalArgs,
+    printer: &Printer,
 ) -> Result<(), CliError> {
     let config = Config::load()?;
     let host = config.resolve_host(global.host.as_deref());
@@ -95,17 +105,15 @@ fn run_create(
         },
     };
     let repo = runtime()?.block_on(RepoService::new(&client).create(&req))?;
-    print_repo(&repo);
-    Ok(())
+    printer.emit(&RepoCreated(repo))
 }
 
-fn run_list(global: &GlobalArgs) -> Result<(), CliError> {
+fn run_list(global: &GlobalArgs, printer: &Printer) -> Result<(), CliError> {
     let config = Config::load()?;
     let host = config.resolve_host(global.host.as_deref());
     let client = Client::for_host(&config, &host, &TokenStore::new()?)?;
     let repos = runtime()?.block_on(RepoService::new(&client).list())?;
-    print_repo_list(&repos);
-    Ok(())
+    printer.emit(&RepoList(repos))
 }
 
 fn run_clone(
@@ -113,6 +121,7 @@ fn run_clone(
     dest: Option<&Path>,
     ssh: bool,
     global: &GlobalArgs,
+    printer: &Printer,
 ) -> Result<(), CliError> {
     let config = Config::load()?;
     let host = config.resolve_host(global.host.as_deref());
@@ -121,8 +130,11 @@ fn run_clone(
     let url = if ssh { &repo.ssh_url } else { &repo.clone_url };
     ensure_helper_for(url)?;
     git::clone_repo(url, dest)?;
-    println!("Cloned {}.", repo.full_name);
-    Ok(())
+    let path = resolve_clone_path(url, dest)?;
+    printer.emit(&CloneOutcome {
+        full_name: repo.full_name,
+        path,
+    })
 }
 
 /// Verifies that a credential helper is configured before an HTTPS clone,
@@ -146,13 +158,12 @@ fn https_host(url: &str) -> Option<&str> {
         .and_then(|rest| rest.split('/').next())
 }
 
-fn run_view(name: &str, global: &GlobalArgs) -> Result<(), CliError> {
+fn run_view(name: &str, global: &GlobalArgs, printer: &Printer) -> Result<(), CliError> {
     let config = Config::load()?;
     let host = config.resolve_host(global.host.as_deref());
     let client = Client::for_host(&config, &host, &TokenStore::new()?)?;
     let repo = runtime()?.block_on(RepoService::new(&client).view(name))?;
-    print_repo_detail(&repo);
-    Ok(())
+    printer.emit(&RepoDetail(repo))
 }
 
 fn runtime() -> Result<tokio::runtime::Runtime, CliError> {
@@ -162,23 +173,119 @@ fn runtime() -> Result<tokio::runtime::Runtime, CliError> {
         .map_err(|e| CliError::Generic(format!("cannot create async runtime: {e}")))
 }
 
-fn print_repo(repo: &Repository) {
-    println!("Created {}.", repo.full_name);
-}
+/// Output of `repo create`: serializes as the created repository resource.
+#[derive(Serialize)]
+#[serde(transparent)]
+struct RepoCreated(Repository);
 
-fn print_repo_list(repos: &[Repository]) {
-    for repo in repos {
-        println!("{:<40}  [{}]", repo.full_name, repo.visibility);
+impl HumanRender for RepoCreated {
+    fn render(&self, out: &mut dyn Write) -> io::Result<()> {
+        writeln!(out, "Created {}.", self.0.full_name)
     }
 }
 
-fn print_repo_detail(repo: &Repository) {
-    println!("name:          {}", repo.full_name);
-    println!("visibility:    {}", repo.visibility);
-    println!("clone (https): {}", repo.clone_url);
-    println!("clone (ssh):   {}", repo.ssh_url);
-    if let Some(desc) = &repo.description {
-        println!("description:   {desc}");
+/// Output of `repo list`: serializes as an array of repository resources.
+#[derive(Serialize)]
+#[serde(transparent)]
+struct RepoList(Vec<Repository>);
+
+impl HumanRender for RepoList {
+    fn render(&self, out: &mut dyn Write) -> io::Result<()> {
+        let rows: Vec<Vec<String>> = self
+            .0
+            .iter()
+            .map(|repo| {
+                vec![
+                    repo.full_name.clone(),
+                    repo.visibility.to_string(),
+                    repo.description.clone().unwrap_or_default(),
+                ]
+            })
+            .collect();
+        output::write_table(out, &["NAME", "VISIBILITY", "DESCRIPTION"], &rows)
     }
-    println!("created:       {}", repo.created_at);
+}
+
+/// Output of `repo view`: serializes as the repository resource.
+#[derive(Serialize)]
+#[serde(transparent)]
+struct RepoDetail(Repository);
+
+/// Width of the key column in the detail view, sized to its longest label.
+const DETAIL_KEY_WIDTH: usize = 14;
+
+impl HumanRender for RepoDetail {
+    fn render(&self, out: &mut dyn Write) -> io::Result<()> {
+        let repo = &self.0;
+        output::write_field(out, "name", DETAIL_KEY_WIDTH, &repo.full_name)?;
+        output::write_field(
+            out,
+            "visibility",
+            DETAIL_KEY_WIDTH,
+            &repo.visibility.to_string(),
+        )?;
+        output::write_field(out, "clone (https)", DETAIL_KEY_WIDTH, &repo.clone_url)?;
+        output::write_field(out, "clone (ssh)", DETAIL_KEY_WIDTH, &repo.ssh_url)?;
+        if let Some(desc) = &repo.description {
+            output::write_field(out, "description", DETAIL_KEY_WIDTH, desc)?;
+        }
+        output::write_field(out, "created", DETAIL_KEY_WIDTH, &repo.created_at)
+    }
+}
+
+/// Output of `repo clone`: the cloned repository and its local path.
+#[derive(Serialize)]
+struct CloneOutcome {
+    /// Fully qualified `namespace/name` handle.
+    full_name: String,
+    /// Absolute path of the local clone.
+    path: String,
+}
+
+impl HumanRender for CloneOutcome {
+    fn render(&self, out: &mut dyn Write) -> io::Result<()> {
+        writeln!(out, "Cloned {}.", self.full_name)
+    }
+}
+
+/// Resolves the absolute local path a clone lands in: the explicit
+/// destination when given, otherwise the directory git derives from the
+/// clone URL.
+fn resolve_clone_path(url: &str, dest: Option<&Path>) -> Result<String, CliError> {
+    let dest = dest.map_or_else(|| PathBuf::from(humanish_name(url)), Path::to_path_buf);
+    let absolute = if dest.is_absolute() {
+        dest
+    } else {
+        std::env::current_dir()
+            .map_err(|e| CliError::Generic(format!("cannot resolve working directory: {e}")))?
+            .join(dest)
+    };
+    Ok(absolute.to_string_lossy().into_owned())
+}
+
+/// Returns the directory name git derives from a clone URL: the last path
+/// segment with a trailing `.git` suffix removed.
+fn humanish_name(url: &str) -> &str {
+    let trimmed = url.trim_end_matches('/');
+    let last = trimmed.rsplit('/').next().unwrap_or(trimmed);
+    last.strip_suffix(".git").unwrap_or(last)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::humanish_name;
+
+    #[test]
+    fn humanish_name_strips_path_and_git_suffix() {
+        assert_eq!(
+            humanish_name("https://git.nubster.com/ns/test-repo.git"),
+            "test-repo"
+        );
+        assert_eq!(
+            humanish_name("ssh://git@git.nubster.com/ns/test-repo.git"),
+            "test-repo"
+        );
+        assert_eq!(humanish_name("https://host/ns/repo/"), "repo");
+        assert_eq!(humanish_name("repo.git"), "repo");
+    }
 }

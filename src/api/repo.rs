@@ -37,7 +37,7 @@ pub struct CreateRepoRequest {
 }
 
 /// Repository resource returned by the platform.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Repository {
     /// Fully qualified `namespace/name` handle.
     pub full_name: String,
