@@ -1,3 +1,5 @@
+//! Integration tests for top-level CLI behaviour (help, error output, exit codes).
+
 use std::process::Command;
 
 fn nub() -> Command {

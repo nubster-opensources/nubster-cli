@@ -1,3 +1,5 @@
+//! Integration tests for git credential helper and clone operations.
+
 use std::fs;
 use std::io::Write;
 use std::process::{Command, Output, Stdio};

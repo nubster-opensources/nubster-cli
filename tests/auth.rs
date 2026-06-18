@@ -1,3 +1,5 @@
+//! Integration tests for `nub auth` subcommands.
+
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
