@@ -2,11 +2,16 @@
 name = "nub"
 version = "0.1.0"
 edition = "2021"
-description = "Unified command-line client for the Nubster platform, starting with sovereign source control."
-license = "MIT"
+description = "Unified command-line client for the Nubster developer platform, starting with repository management."
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/nubster-opensources/nubster-cli"
 readme = "README.md"
 publish = false
+rust-version = "1.85"
+authors = ["Nubster"]
+homepage = "https://nubster.com"
+keywords = ["cli", "source-control", "developer-platform", "nubster"]
+categories = ["command-line-utilities"]
 
 [[bin]]
 name = "nub"
