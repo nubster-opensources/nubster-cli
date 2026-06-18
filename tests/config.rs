@@ -1,3 +1,5 @@
+//! Integration tests for `nub config` subcommands.
+
 use std::process::Command;
 
 fn nub() -> Command {

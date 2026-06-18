@@ -1,3 +1,5 @@
+//! Integration tests for `nub repo` subcommands.
+
 use std::io::Write as _;
 use std::process::{Command, Stdio};
 

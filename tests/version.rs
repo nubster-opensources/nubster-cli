@@ -1,3 +1,5 @@
+//! Integration tests for the `--version` flag.
+
 use std::process::Command;
 
 /// `nub --version` exits successfully and prints the crate version.
