@@ -1,16 +1,8 @@
-//! Nubster CLI (`nub`): unified command-line client for the Nubster platform.
+//! Nubster CLI (`nub`) binary entry point.
 
 use clap::Parser;
-
-mod api;
-mod auth;
-mod cli;
-mod commands;
-mod config;
-mod error;
-mod git;
-mod output;
+use nub::cli::{self, Cli};
 
 fn main() -> std::process::ExitCode {
-    cli::run(cli::Cli::parse())
+    cli::run(Cli::parse())
 }
