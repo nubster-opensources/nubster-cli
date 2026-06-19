@@ -1,0 +1,32 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH auth 1  "auth " 
+.SH NAME
+auth \- Authentication and credentials
+.SH SYNOPSIS
+\fBauth\fR [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Authentication and credentials
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH SUBCOMMANDS
+.TP
+auth\-login(1)
+Log in to a host
+.TP
+auth\-logout(1)
+Remove stored credentials for the host
+.TP
+auth\-status(1)
+Show the current authentication status
+.TP
+auth\-setup\-git(1)
+Register `nub` as a git credential helper
+.TP
+auth\-git\-credential(1)
+Git credential protocol entry point (invoked by git, not by users)
+.TP
+auth\-help(1)
+Print this message or the help of the given subcommand(s)

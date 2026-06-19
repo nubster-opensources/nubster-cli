@@ -1,0 +1,40 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH nub 1  "nub 0.1.0" 
+.SH NAME
+nub \- Unified command\-line client for the Nubster platform.
+.SH SYNOPSIS
+\fBnub\fR [\fB\-\-host\fR] [\fB\-\-json\fR] [\fB\-\-no\-color\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Unified command\-line client for the Nubster platform.
+.SH OPTIONS
+.TP
+\fB\-\-host\fR \fI<HOST>\fR
+Target platform host (overrides the configured default)
+.TP
+\fB\-\-json\fR
+Emit machine\-readable JSON instead of human output
+.TP
+\fB\-\-no\-color\fR
+Disable colored output
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version
+.SH SUBCOMMANDS
+.TP
+nub\-auth(1)
+Authentication and credentials
+.TP
+nub\-repo(1)
+Repository operations
+.TP
+nub\-config(1)
+Inspect the CLI configuration
+.TP
+nub\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH VERSION
+v0.1.0

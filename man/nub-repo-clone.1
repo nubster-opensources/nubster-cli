@@ -1,0 +1,25 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH clone 1  "clone " 
+.SH NAME
+clone \- Clone a repository to the local filesystem
+.SH SYNOPSIS
+\fBclone\fR [\fB\-\-dest\fR] [\fB\-\-ssh\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> [\fIDEST\fR] 
+.SH DESCRIPTION
+Clone a repository to the local filesystem
+.SH OPTIONS
+.TP
+\fB\-\-dest\fR \fI<PATH>\fR
+Destination directory, flag form
+.TP
+\fB\-\-ssh\fR
+Clone over SSH instead of HTTPS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Repository name (`namespace/repo` or bare `repo`)
+.TP
+[\fIDEST\fR]
+Destination directory (defaults to the repository name)

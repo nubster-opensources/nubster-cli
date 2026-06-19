@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH login 1  "login " 
+.SH NAME
+login \- Log in to a host
+.SH SYNOPSIS
+\fBlogin\fR [\fB\-\-with\-token\fR] [\fB\-\-git\-host\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Log in to a host
+.SH OPTIONS
+.TP
+\fB\-\-with\-token\fR
+Read a personal access token from stdin instead of the browser flow
+.TP
+\fB\-\-git\-host\fR \fI<GIT_HOST>\fR
+Override the git host to register for the credential helper
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
