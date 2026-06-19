@@ -1,6 +1,15 @@
 [workspace]
 members = ["xtask"]
 
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nubster-opensources/nubster-cli"
+homepage = "https://nubster.com"
+authors = ["Nubster"]
+
 [workspace.lints.rust]
 missing_docs = "deny"
 unsafe_code = "deny"
@@ -12,16 +21,16 @@ module_name_repetitions = "allow"
 
 [package]
 name = "nub"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
 description = "Unified command-line client for the Nubster developer platform, starting with repository management."
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/nubster-opensources/nubster-cli"
 readme = "README.md"
 publish = false
-rust-version = "1.88"
-authors = ["Nubster"]
-homepage = "https://nubster.com"
 keywords = ["cli", "source-control", "developer-platform", "nubster"]
 categories = ["command-line-utilities"]
 
