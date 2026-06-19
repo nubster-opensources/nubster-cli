@@ -1,3 +1,15 @@
+[workspace]
+members = ["xtask"]
+
+[workspace.lints.rust]
+missing_docs = "deny"
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+module_name_repetitions = "allow"
+
 [package]
 name = "nub"
 version = "0.1.0"
@@ -12,6 +24,9 @@ authors = ["Nubster"]
 homepage = "https://nubster.com"
 keywords = ["cli", "source-control", "developer-platform", "nubster"]
 categories = ["command-line-utilities"]
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "nub"
@@ -40,12 +55,3 @@ tokio = { version = "1", features = ["rt", "macros", "time"] }
 [dev-dependencies]
 tempfile = "3"
 wiremock = "0.6"
-
-[lints.rust]
-missing_docs = "deny"
-unsafe_code = "deny"
-
-[lints.clippy]
-all = { level = "deny", priority = -1 }
-pedantic = { level = "deny", priority = -1 }
-module_name_repetitions = "allow"
