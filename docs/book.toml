@@ -1,0 +1,11 @@
+[book]
+title = "nub"
+language = "en"
+src = "."
+
+[build]
+build-dir = "../book"
+
+[output.html]
+git-repository-url = "https://github.com/nubster-opensources/nubster-cli"
+edit-url-template = "https://github.com/nubster-opensources/nubster-cli/edit/main/docs/{path}"

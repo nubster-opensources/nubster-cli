@@ -1,0 +1,22 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH create 1  "create " 
+.SH NAME
+create \- Create a new repository on the platform
+.SH SYNOPSIS
+\fBcreate\fR <\fB\-\-name\fR> [\fB\-\-description\fR] [\fB\-\-public\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Create a new repository on the platform
+.SH OPTIONS
+.TP
+\fB\-\-name\fR \fI<NAME>\fR
+Short name for the new repository
+.TP
+\fB\-\-description\fR \fI<DESCRIPTION>\fR
+Optional description shown in listings
+.TP
+\fB\-\-public\fR
+Make the repository publicly accessible (default: private)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help

@@ -1,3 +1,5 @@
+//! CLI entry point: argument parser and top-level dispatch for `nub`.
+
 use clap::{Args, Parser, Subcommand};
 use std::process::ExitCode;
 
@@ -6,21 +8,21 @@ use crate::output::Printer;
 
 /// Options accepted at any level of the command tree.
 #[derive(Args, Debug)]
-pub struct GlobalArgs {
+pub(crate) struct GlobalArgs {
     /// Target platform host (overrides the configured default).
     #[arg(long, global = true)]
-    pub host: Option<String>,
+    pub(crate) host: Option<String>,
     /// Emit machine-readable JSON instead of human output.
     #[arg(long, global = true)]
-    pub json: bool,
+    pub(crate) json: bool,
     /// Disable colored output.
     #[arg(long, global = true)]
-    pub no_color: bool,
+    pub(crate) no_color: bool,
 }
 
 /// Top-level command groups.
 #[derive(Subcommand, Debug)]
-pub enum Command {
+pub(crate) enum Command {
     /// Authentication and credentials.
     Auth(commands::auth::AuthArgs),
     /// Repository operations.
@@ -39,9 +41,9 @@ pub enum Command {
 )]
 pub struct Cli {
     #[command(flatten)]
-    pub global: GlobalArgs,
+    pub(crate) global: GlobalArgs,
     #[command(subcommand)]
-    pub command: Command,
+    pub(crate) command: Command,
 }
 
 /// Runs the parsed CLI and returns a process exit code.

@@ -21,5 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `nub config show`: print the current configuration and the effective host.
 - Global flags (`--host`, `--json`, `--no-color`) accepted at every command level.
 - Machine-readable JSON output mode (`--json`) on all commands that produce structured output.
+- Online documentation built with mdBook and published to GitHub Pages, covering tutorials,
+  how-to guides, reference, and explanation (Diataxis structure).
+- Generated CLI reference (markdown) and man pages produced by `cargo xtask doc-gen`.
+- Release process, semantic versioning policy, and MSRV policy documented in `docs/`.
 
 [0.1.0]: https://github.com/nubster-opensources/nubster-cli/releases/tag/v0.1.0
