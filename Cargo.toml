@@ -42,7 +42,7 @@ name = "nub"
 path = "src/main.rs"
 
 [dependencies]
-anstream = "0.6"
+anstream = "1.0"
 anstyle = "1"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
