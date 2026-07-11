@@ -31,7 +31,7 @@ authors.workspace = true
 description = "Unified command-line client for the Nubster developer platform, starting with repository management."
 readme = "README.md"
 publish = false
-keywords = ["cli", "source-control", "developer-platform", "nubster"]
+keywords = ["cli", "source-control", "developer-platform"]
 categories = ["command-line-utilities"]
 
 [lints]
