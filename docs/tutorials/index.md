@@ -5,7 +5,7 @@ and cloning your first repository.
 
 ## Prerequisites
 
-- Rust 1.88 or later (for building from source).
+- Rust 1.89 or later (for building from source).
 - A running Nubster instance and a personal access token issued from its web interface.
 
 ## Step 1: build and install nub

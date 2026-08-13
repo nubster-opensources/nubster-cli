@@ -4,6 +4,12 @@ All notable changes to nub will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Raise the MSRV from Rust 1.88 to 1.89 for the August 2026 fleet baseline and prefer MSRV-compatible dependency versions during Cargo updates.
+
 ## [0.1.0] - 2026-06-18
 
 ### Added
@@ -26,4 +32,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Generated CLI reference (markdown) and man pages produced by `cargo xtask doc-gen`.
 - Release process, semantic versioning policy, and MSRV policy documented in `docs/`.
 
+[Unreleased]: https://github.com/nubster-opensources/nubster-cli/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/nubster-opensources/nubster-cli/releases/tag/v0.1.0
